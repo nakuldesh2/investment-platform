@@ -1,11 +1,44 @@
 version: '3.9'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: investment-postgres
+    environment:
+      POSTGRES_USER: investment_user
+      POSTGRES_PASSWORD: investment_pass
+      POSTGRES_DB: investment_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U investment_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: investment-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   market-data-service:
     build: ./market-data-service
     container_name: market-data-service
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8001:8001"
 
@@ -14,6 +47,9 @@ services:
     container_name: news-service
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8002:8002"
 
@@ -23,8 +59,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - market-data-service
-      - news-service
+      postgres:
+        condition: service_healthy
+      market-data-service:
+        condition: service_started
+      news-service:
+        condition: service_started
     ports:
       - "8003:8003"
 
@@ -34,8 +74,17 @@ services:
     env_file:
       - .env
     depends_on:
-      - market-data-service
-      - news-service
-      - ml-signal-service
+      postgres:
+        condition: service_healthy
+      market-data-service:
+        condition: service_started
+      news-service:
+        condition: service_started
+      ml-signal-service:
+        condition: service_started
     ports:
       - "8000:8000"
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -3,7 +3,18 @@
     "allow": [
       "Bash(xargs ls -lh)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(docker compose *)",
+      "Bash(docker --version)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(curl -s http://localhost:8001/health)",
+      "Bash(curl -s http://localhost:8002/health)",
+      "Bash(curl -s http://localhost:8003/health)",
+      "Bash(echo *)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(xargs cat)",
+      "Bash(git commit -m 'feat: Add public deployment infrastructure with user allowlist and API key management *)"
     ]
   }
 }

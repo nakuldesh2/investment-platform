@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  market-data-service:
+    build: ./market-data-service
+    container_name: market-data-service
+    env_file:
+      - .env
+    ports:
+      - "8001:8001"
+
+  news-service:
+    build: ./news-service
+    container_name: news-service
+    env_file:
+      - .env
+    ports:
+      - "8002:8002"
+
+  ml-signal-service:
+    build: ./ml-signal-service
+    container_name: ml-signal-service
+    env_file:
+      - .env
+    depends_on:
+      - market-data-service
+      - news-service
+    ports:
+      - "8003:8003"
+
+  gateway-service:
+    build: ./gateway-service
+    container_name: gateway-service
+    env_file:
+      - .env
+    depends_on:
+      - market-data-service
+      - news-service
+      - ml-signal-service
+    ports:
+      - "8000:8000"

@@ -66,3 +66,8 @@ async def error_handling_middleware(request: Request, call_next):
             },
             headers={"X-Correlation-ID": correlation_id_value}
         )
+
+
+def setup_error_handling(app):
+    """Setup global error handling middleware for the FastAPI app"""
+    app.middleware("http")(error_handling_middleware)

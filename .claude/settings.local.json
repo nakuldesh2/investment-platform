@@ -14,7 +14,8 @@
       "Bash(echo *)",
       "Bash(curl -s http://localhost:3000)",
       "Bash(xargs cat)",
-      "Bash(git commit -m 'feat: Add public deployment infrastructure with user allowlist and API key management *)"
+      "Bash(git commit -m 'feat: Add public deployment infrastructure with user allowlist and API key management *)",
+      "Bash(git commit *)"
     ]
   }
 }

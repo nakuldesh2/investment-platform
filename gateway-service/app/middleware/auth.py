@@ -86,3 +86,8 @@ def get_current_user_id(request: Request) -> int:
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user_id
+
+
+def setup_auth_middleware(app):
+    """Setup JWT authentication middleware for the FastAPI app"""
+    app.middleware("http")(jwt_middleware)

@@ -1,7 +1,7 @@
 """Authentication routes for user registration, login, and token management"""
 
 import logging
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -15,6 +15,14 @@ from app.logging_config import get_logger
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger(__name__)
+
+
+def get_current_user_id(request: Request) -> int:
+    """Extract user_id from request state (set by auth middleware)"""
+    user_id = getattr(request.state, "user_id", None)
+    if not user_id:
+        raise UnauthorizedError("Not authenticated")
+    return user_id
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
@@ -165,13 +173,10 @@ async def refresh_token(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(
-    user_id: int = Depends(lambda: None),  # Placeholder, filled by middleware
+    user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Get current authenticated user information"""
-    if not user_id:
-        raise UnauthorizedError("Not authenticated")
-
     stmt = select(User).where(User.id == user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
@@ -184,13 +189,10 @@ async def get_current_user(
 
 @router.get("/user-keys")
 async def get_user_keys(
-    user_id: int = Depends(lambda: None),
+    user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Get current user's stored API keys"""
-    if not user_id:
-        raise UnauthorizedError("Not authenticated")
-
     try:
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
@@ -214,13 +216,10 @@ async def get_user_keys(
 @router.post("/user-keys")
 async def update_user_keys(
     keys: dict,
-    user_id: int = Depends(lambda: None),
+    user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Update current user's API keys"""
-    if not user_id:
-        raise UnauthorizedError("Not authenticated")
-
     try:
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)

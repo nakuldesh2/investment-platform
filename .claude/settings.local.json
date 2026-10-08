@@ -15,7 +15,8 @@
       "Bash(curl -s http://localhost:3000)",
       "Bash(xargs cat)",
       "Bash(git commit -m 'feat: Add public deployment infrastructure with user allowlist and API key management *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(curl -s http://localhost:8000/openapi.json)"
     ]
   }
 }

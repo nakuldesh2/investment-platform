@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json ./
 
 # Install dependencies (legacy-peer-deps for TypeScript 5.x with react-scripts)
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps --force
 
 # Copy source code
 COPY public ./public

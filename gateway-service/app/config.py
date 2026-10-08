@@ -68,6 +68,12 @@ class GatewaySettings(BaseAppSettings):
     jwt_algorithm: str = Field(default="HS256", description="JWT algorithm")
     jwt_expiration_hours: int = Field(default=24, description="JWT token expiration in hours")
 
+    # User allowlist
+    allowlist_emails: list[str] = Field(
+        default=["admin@example.com"],
+        description="List of emails auto-approved without admin review"
+    )
+
     def __init__(self, **data):
         super().__init__(**data)
         self.service_name = "gateway-service"

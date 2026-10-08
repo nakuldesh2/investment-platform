@@ -34,16 +34,26 @@ async def register(
             logger.warning(f"Registration attempt with existing email: {request.email}")
             raise InvalidRequestError(f"Email {request.email} is already registered")
 
+        # Check if email is in allowlist
+        is_allowlisted = request.email in settings.allowlist_emails
+        user_status = "approved" if is_allowlisted else "pending"
+
         # Create new user with hashed password
         new_user = User(
             email=request.email,
-            password_hash=hash_password(request.password)
+            password_hash=hash_password(request.password),
+            is_allowlisted=is_allowlisted,
+            status=user_status
         )
         db.add(new_user)
         await db.commit()
         await db.refresh(new_user)
 
-        logger.info(f"User registered successfully: {new_user.email}")
+        if is_allowlisted:
+            logger.info(f"User registered and auto-approved: {new_user.email}")
+        else:
+            logger.info(f"User registered pending approval: {new_user.email}")
+
         return UserResponse(id=new_user.id, email=new_user.email)
 
     except InvalidRequestError:
@@ -73,6 +83,11 @@ async def login(
         if not user or not verify_password(request.password, user.password_hash):
             logger.warning(f"Failed login attempt for email: {request.email}")
             raise UnauthorizedError("Invalid email or password")
+
+        # Check if user is allowlisted and approved
+        if not user.is_allowlisted or user.status != "approved":
+            logger.warning(f"Login attempt by non-approved user: {user.email} (status: {user.status})")
+            raise UnauthorizedError("Your account is pending approval. Contact admin for access.")
 
         # Create JWT token
         token = create_access_token(user.id, settings)
@@ -165,3 +180,72 @@ async def get_current_user(
         raise UnauthorizedError("User not found")
 
     return UserResponse(id=user.id, email=user.email)
+
+
+@router.get("/user-keys")
+async def get_user_keys(
+    user_id: int = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get current user's stored API keys"""
+    if not user_id:
+        raise UnauthorizedError("Not authenticated")
+
+    try:
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise UnauthorizedError("User not found")
+
+        return {
+            "user_id": user.id,
+            "api_keys": user.api_keys or {}
+        }
+
+    except UnauthorizedError:
+        raise
+    except Exception as exc:
+        logger.error(f"Error fetching user keys: {str(exc)}", exc_info=True)
+        raise DatabaseError("Failed to fetch API keys")
+
+
+@router.post("/user-keys")
+async def update_user_keys(
+    keys: dict,
+    user_id: int = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update current user's API keys"""
+    if not user_id:
+        raise UnauthorizedError("Not authenticated")
+
+    try:
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise UnauthorizedError("User not found")
+
+        # Update the user's API keys
+        user.api_keys = keys
+        await db.commit()
+        await db.refresh(user)
+
+        logger.info(f"API keys updated for user: {user.email} (keys: {list(keys.keys())})")
+
+        return {
+            "message": "API keys updated successfully",
+            "user_id": user.id,
+            "keys_stored": list(keys.keys())
+        }
+
+    except UnauthorizedError:
+        await db.rollback()
+        raise
+    except Exception as exc:
+        await db.rollback()
+        logger.error(f"Error updating user keys: {str(exc)}", exc_info=True)
+        raise DatabaseError("Failed to update API keys")

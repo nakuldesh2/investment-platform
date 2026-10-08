@@ -1,14 +1,42 @@
-import React, { useState } from 'react';
-import { AlertCircle, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, ExternalLink, CheckCircle } from 'lucide-react';
 import './ApiKeySetup.css';
 
-function ApiKeySetup({ onSubmit }) {
+function ApiKeySetup({ onComplete, userId }) {
   const [formData, setFormData] = useState({
-    alphaVantageKey: '',
-    newsApiKey: '',
-    finnhubKey: ''
+    alpha_vantage: '',
+    news_api: '',
+    finnhub: ''
   });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Load existing API keys on mount
+  useEffect(() => {
+    const loadExistingKeys = async () => {
+      try {
+        const apiBase = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await fetch(`${apiBase}/auth/user-keys`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.api_keys && Object.keys(data.api_keys).length > 0) {
+            setFormData(data.api_keys);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load existing API keys:', err);
+      }
+    };
+
+    loadExistingKeys();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,27 +54,55 @@ function ApiKeySetup({ onSubmit }) {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.alphaVantageKey.trim()) {
-      newErrors.alphaVantageKey = 'Alpha Vantage API key is required';
+    if (!formData.alpha_vantage.trim()) {
+      newErrors.alpha_vantage = 'Alpha Vantage API key is required';
     }
-    if (!formData.newsApiKey.trim()) {
-      newErrors.newsApiKey = 'NewsAPI key is required';
+    if (!formData.news_api.trim()) {
+      newErrors.news_api = 'NewsAPI key is required';
     }
-    if (!formData.finnhubKey.trim()) {
-      newErrors.finnhubKey = 'Finnhub API key is required';
+    if (!formData.finnhub.trim()) {
+      newErrors.finnhub = 'Finnhub API key is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSubmit({
-        alphaVantageKey: formData.alphaVantageKey,
-        newsApiKey: formData.newsApiKey,
-        finnhubKey: formData.finnhubKey
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setSuccess(false);
+    setErrors({});
+
+    try {
+      const apiBase = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiBase}/auth/user-keys`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(formData)
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to save API keys');
+      }
+
+      const data = await response.json();
+      setSuccess(true);
+      setSuccessMessage(`✅ API keys saved! (${data.keys_stored.join(', ')})`);
+
+      // Call completion callback if provided
+      if (onComplete) {
+        setTimeout(() => onComplete(), 1500);
+      }
+    } catch (err) {
+      setErrors({ submit: err.message || 'Failed to save API keys' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,84 +110,98 @@ function ApiKeySetup({ onSubmit }) {
     <div className="api-key-setup">
       <div className="setup-container">
         <div className="setup-header">
-          <h1>Investment Platform</h1>
-          <p>Real-time Market Data, News & AI Trading Signals</p>
+          <h1>Configure API Keys</h1>
+          <p>Enter your API keys to access real market data</p>
         </div>
 
         <div className="setup-content">
+          {success && (
+            <div className="success-box">
+              <CheckCircle size={20} />
+              <p>{successMessage}</p>
+            </div>
+          )}
+
+          {errors.submit && (
+            <div className="error-box">
+              <AlertCircle size={20} />
+              <p>{errors.submit}</p>
+            </div>
+          )}
+
           <div className="info-box">
             <AlertCircle size={20} />
-            <p>Your API keys are stored only in your browser. We don't store or access any of your data.</p>
+            <p>Your API keys are stored securely in our database and never exposed to the browser.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="api-key-form">
             <div className="form-section">
-              <h2>Step 1: Get Your API Keys</h2>
+              <h2>Step 1: Get Free API Keys</h2>
               <p>Sign up for free accounts and get your API keys:</p>
             </div>
 
             <div className="form-group">
-              <label htmlFor="alphaVantageKey">
-                <span>Alpha Vantage API Key</span>
+              <label htmlFor="alpha_vantage">
+                <span>Alpha Vantage API Key *</span>
                 <a href="https://www.alphavantage.co/" target="_blank" rel="noopener noreferrer">
                   Get Free Key <ExternalLink size={14} />
                 </a>
               </label>
               <input
-                id="alphaVantageKey"
+                id="alpha_vantage"
                 type="password"
-                name="alphaVantageKey"
-                value={formData.alphaVantageKey}
+                name="alpha_vantage"
+                value={formData.alpha_vantage}
                 onChange={handleChange}
                 placeholder="Enter your Alpha Vantage API key"
-                className={errors.alphaVantageKey ? 'error' : ''}
+                className={errors.alpha_vantage ? 'error' : ''}
               />
-              {errors.alphaVantageKey && <span className="error-text">{errors.alphaVantageKey}</span>}
-              <small>Used for real-time stock quotes and market data</small>
+              {errors.alpha_vantage && <span className="error-text">{errors.alpha_vantage}</span>}
+              <small>Free tier: 5 calls/min, 500/day | Used for real-time stock quotes</small>
             </div>
 
             <div className="form-group">
-              <label htmlFor="newsApiKey">
-                <span>NewsAPI Key</span>
+              <label htmlFor="news_api">
+                <span>NewsAPI Key *</span>
                 <a href="https://newsapi.org/" target="_blank" rel="noopener noreferrer">
                   Get Free Key <ExternalLink size={14} />
                 </a>
               </label>
               <input
-                id="newsApiKey"
+                id="news_api"
                 type="password"
-                name="newsApiKey"
-                value={formData.newsApiKey}
+                name="news_api"
+                value={formData.news_api}
                 onChange={handleChange}
                 placeholder="Enter your NewsAPI key"
-                className={errors.newsApiKey ? 'error' : ''}
+                className={errors.news_api ? 'error' : ''}
               />
-              {errors.newsApiKey && <span className="error-text">{errors.newsApiKey}</span>}
-              <small>Used for financial news and market updates</small>
+              {errors.news_api && <span className="error-text">{errors.news_api}</span>}
+              <small>Free tier: 100 requests/day | Used for financial news</small>
             </div>
 
             <div className="form-group">
-              <label htmlFor="finnhubKey">
-                <span>Finnhub API Key</span>
+              <label htmlFor="finnhub">
+                <span>Finnhub API Key *</span>
                 <a href="https://finnhub.io/" target="_blank" rel="noopener noreferrer">
                   Get Free Key <ExternalLink size={14} />
                 </a>
               </label>
               <input
-                id="finnhubKey"
+                id="finnhub"
                 type="password"
-                name="finnhubKey"
-                value={formData.finnhubKey}
+                name="finnhub"
+                value={formData.finnhub}
                 onChange={handleChange}
                 placeholder="Enter your Finnhub API key"
-                className={errors.finnhubKey ? 'error' : ''}
+                className={errors.finnhub ? 'error' : ''}
               />
-              {errors.finnhubKey && <span className="error-text">{errors.finnhubKey}</span>}
-              <small>Used for company data and fundamentals</small>
+              {errors.finnhub && <span className="error-text">{errors.finnhub}</span>}
+              <small>Free tier: 60 calls/min | Used for company data</small>
             </div>
 
-            <button type="submit" className="submit-btn">
-              Continue to Dashboard
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? 'Saving...' : 'Save API Keys'}
             </button>
           </form>
 
@@ -147,8 +217,8 @@ function ApiKeySetup({ onSubmit }) {
           </div>
 
           <div className="privacy-notice">
-            <h4>Privacy Notice</h4>
-            <p>This platform does not store any of your data. Your API keys and search history are stored only in your browser's local storage. Each session is independent and we cannot access any of your information.</p>
+            <h4>Security</h4>
+            <p>Your API keys are stored securely in our database with encryption. Only you can retrieve your own keys. We never expose your keys to the browser or third parties.</p>
           </div>
         </div>
       </div>

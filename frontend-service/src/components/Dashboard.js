@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Search, Newspaper, Zap } from 'lucide-react';
+import { LogOut, Search, TrendingUp, Newspaper, Zap } from 'lucide-react';
 import './Dashboard.css';
 import StockSearch from './StockSearch';
 import NewsSection from './NewsSection';

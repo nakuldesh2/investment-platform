@@ -36,7 +36,7 @@ function ApiKeySetup({ onComplete, userId, backendUrl }) {
     };
 
     loadExistingKeys();
-  }, [apiBase]);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

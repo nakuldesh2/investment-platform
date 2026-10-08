@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './RequestAccess.css';
 
 function RequestAccess({ email }) {
+  const [submitted, setSubmitted] = useState(false);
+
   return (
     <div className="request-access-container">
       <div className="request-access-card">

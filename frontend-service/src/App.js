@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard';
 function App() {
   const [authState, setAuthState] = useState('loading'); // loading, login, request_access, setup, dashboard
   const [user, setUser] = useState(null);
+  const [apiKeysSetup, setApiKeysSetup] = useState(false);
   const [backendUrl] = useState(
     process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'
   );
@@ -15,7 +16,6 @@ function App() {
   // Check authentication status on mount
   useEffect(() => {
     checkAuthStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuthStatus = async () => {
@@ -65,6 +65,7 @@ function App() {
   };
 
   const handleApiKeysSetup = () => {
+    setApiKeysSetup(true);
     setAuthState('dashboard');
   };
 
@@ -80,6 +81,7 @@ function App() {
     }
 
     setUser(null);
+    setApiKeysSetup(false);
     setAuthState('login');
   };
 

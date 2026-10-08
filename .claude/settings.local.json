@@ -16,7 +16,12 @@
       "Bash(xargs cat)",
       "Bash(git commit -m 'feat: Add public deployment infrastructure with user allowlist and API key management *)",
       "Bash(git commit *)",
-      "Bash(curl -s http://localhost:8000/openapi.json)"
+      "Bash(curl -s http://localhost:8000/openapi.json)",
+      "Bash(docker volume *)",
+      "Bash(curl -X POST http://localhost:8000/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"password\":\"testpass123\"}')",
+      "Bash(curl -X POST http://localhost:8000/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"admin@example.com\",\"password\":\"adminpass123\"}')",
+      "Bash(curl *)",
+      "Bash(chmod +x *)"
     ]
   }
 }

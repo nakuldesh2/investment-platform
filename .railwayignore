@@ -1,0 +1,57 @@
+# Railway ignore file - files not to deploy
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local development
+.env
+.env.local
+.env.*.local
+local_data/
+
+# Tests
+.pytest_cache
+.coverage
+htmlcov/
+
+# Docker
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Documentation (not needed in production)
+README.md
+CLAUDE.md
+DEPLOYMENT.md (optional - remove if not needed on server)

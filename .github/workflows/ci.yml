@@ -141,12 +141,12 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: frontend-service/package-lock.json
+          cache-dependency-path: frontend-service/package.json
 
       - name: Install dependencies
         run: |
           cd frontend-service
-          npm ci
+          npm install --legacy-peer-deps
 
       - name: Check for linting issues
         run: |

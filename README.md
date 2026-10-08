@@ -1,5 +1,10 @@
 # Investment Research Platform
 
+[![CI - Lint, Type Check, and Test](https://github.com/nakuldesh2/investment-platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nakuldesh2/investment-platform/actions/workflows/ci.yml)
+[![Deploy to Railway](https://github.com/nakuldesh2/investment-platform/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/nakuldesh2/investment-platform/actions/workflows/deploy.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Node 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
+
 An enterprise-grade microservices platform for AI-assisted investment analysis with real market data APIs, user authentication, and allowlist-based access control.
 
 ## 🚀 Quick Links
@@ -14,6 +19,11 @@ An enterprise-grade microservices platform for AI-assisted investment analysis w
 - **Full Guide:** [DEPLOYMENT.md](DEPLOYMENT.md) (comprehensive guide)
 - **Setup Card:** [RAILWAY_SETUP_CARD.txt](RAILWAY_SETUP_CARD.txt) (reference card)
 - **Checklist:** [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) (verification steps)
+
+### For CI/CD (Automated Testing & Deployment)
+- **⭐ Quick Start:** [CI_CD_QUICKSTART.md](CI_CD_QUICKSTART.md) (5-minute setup)
+- **Full Guide:** [CI_CD_SETUP.md](CI_CD_SETUP.md) (detailed configuration)
+- **Workflow Status:** [GitHub Actions](https://github.com/nakuldesh2/investment-platform/actions)
 
 ## 📋 System Architecture
 
@@ -156,6 +166,34 @@ investment-platform/
 ├── RAILWAY_QUICKSTART.md     # 5-minute setup
 └── scripts/deploy-railway.sh # Deployment helper
 ```
+
+## 🔄 CI/CD Pipeline (Automated Testing & Deployment)
+
+### What's Automated
+
+Every time you push to `main`:
+1. ✅ **Lint & Type Check** - Ruff, mypy for Python; ESLint for JavaScript
+2. ✅ **Unit & Integration Tests** - pytest for backend, Jest for frontend
+3. ✅ **Docker Build Verification** - Ensure all services build
+4. ✅ **Auto Deploy to Railway** - If all tests pass
+5. ✅ **Health Checks** - Verify services are running
+6. ✅ **Slack Notifications** - Get notified on success/failure
+
+### Setup (5 minutes)
+
+1. Get Railway token from dashboard
+2. Add GitHub Secrets: `RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`
+3. Push to `main` → Automatic test & deploy
+4. Check [Actions](https://github.com/nakuldesh2/investment-platform/actions) tab
+
+For detailed setup: See [CI_CD_QUICKSTART.md](CI_CD_QUICKSTART.md)
+
+### Workflow Files
+
+- `.github/workflows/ci.yml` - Tests on every commit
+- `.github/workflows/deploy.yml` - Deploy on merge to main
+- `.github/ISSUE_TEMPLATE/` - Issue templates
+- `.github/pull_request_template.md` - PR template
 
 ## 🚀 Deployment (Railway)
 

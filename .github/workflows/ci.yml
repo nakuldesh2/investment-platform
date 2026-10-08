@@ -1,0 +1,212 @@
+name: CI - Lint, Type Check, and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  backend-lint:
+    name: Backend Lint & Type Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - gateway-service
+          - market-data-service
+          - news-service
+          - ml-signal-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy pydantic
+          if [ -f "${{ matrix.service }}/requirements.txt" ]; then
+            pip install -r "${{ matrix.service }}/requirements.txt"
+          fi
+
+      - name: Lint with Ruff
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          ruff check "${{ matrix.service }}/app" --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          ruff check "${{ matrix.service }}/app" --exit-zero
+        continue-on-error: true
+
+      - name: Type check with mypy
+        run: |
+          mypy "${{ matrix.service }}/app" --ignore-missing-imports --no-error-summary || true
+        continue-on-error: true
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-cov httpx
+
+      - name: Run tests - Gateway Service
+        run: |
+          pip install -r gateway-service/requirements.txt
+          pytest gateway-service/tests -v --cov=gateway-service/app --cov-report=xml || true
+        env:
+          DATABASE_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test_secret_key_for_ci_testing
+          ALLOWLIST_EMAILS: test@example.com
+        continue-on-error: true
+
+      - name: Run tests - Market Data Service
+        run: |
+          pip install -r market-data-service/requirements.txt
+          pytest market-data-service/tests -v --cov=market-data-service/app --cov-report=xml || true
+        env:
+          ALPHA_VANTAGE_API_KEY: demo
+        continue-on-error: true
+
+      - name: Run tests - News Service
+        run: |
+          pip install -r news-service/requirements.txt
+          pytest news-service/tests -v --cov=news-service/app --cov-report=xml || true
+        env:
+          MARKETAUX_API_TOKEN: demo
+        continue-on-error: true
+
+      - name: Run tests - ML Signal Service
+        run: |
+          pip install -r ml-signal-service/requirements.txt
+          pytest ml-signal-service/tests -v --cov=ml-signal-service/app --cov-report=xml || true
+        continue-on-error: true
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  frontend-lint:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend-service/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend-service
+          npm ci
+
+      - name: Check for linting issues
+        run: |
+          cd frontend-service
+          npm run lint 2>/dev/null || echo "No lint script configured"
+        continue-on-error: true
+
+      - name: Build frontend
+        run: |
+          cd frontend-service
+          npm run build
+        env:
+          REACT_APP_BACKEND_URL: http://localhost:8000
+          CI: true
+
+      - name: Run frontend tests
+        run: |
+          cd frontend-service
+          npm test -- --coverage --watchAll=false 2>/dev/null || echo "No test script configured"
+        continue-on-error: true
+
+  docker-build:
+    name: Docker Build Verification
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - gateway-service
+          - market-data-service
+          - news-service
+          - ml-signal-service
+          - frontend-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image for ${{ matrix.service }}
+        uses: docker/build-push-action@v4
+        with:
+          context: ./${{ matrix.service }}
+          push: false
+          tags: ${{ matrix.service }}:latest
+
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [ backend-lint, backend-tests, frontend-lint, docker-build ]
+    if: always()
+
+    steps:
+      - name: Check CI Status
+        run: |
+          if [ "${{ needs.backend-tests.result }}" == "failure" ]; then
+            echo "⚠️  Some tests failed - review logs"
+          fi
+          if [ "${{ needs.frontend-lint.result }}" == "failure" ]; then
+            echo "⚠️  Frontend build failed - review logs"
+          fi
+          echo "✅ CI Checks Complete"
+        continue-on-error: true

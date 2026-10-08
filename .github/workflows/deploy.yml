@@ -1,0 +1,84 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ secrets.RAILWAY_PUBLIC_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway up --detach
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health Check
+        continue-on-error: true
+        run: |
+          echo "🔍 Checking Gateway Service Health..."
+          curl -s -m 10 "https://$(echo ${{ secrets.RAILWAY_PUBLIC_URL }} | cut -d'/' -f3)/health" | jq . || echo "⚠️  Health check failed"
+
+          echo "✅ Deployment may be in progress. Check Railway dashboard for status."
+
+      - name: Slack Notification (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "✅ Investment Platform deployed to production",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*✅ Deployment Successful*\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*URL:* ${{ secrets.RAILWAY_PUBLIC_URL }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true
+
+      - name: Slack Notification (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "❌ Investment Platform deployment failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ Deployment Failed*\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Check logs:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true

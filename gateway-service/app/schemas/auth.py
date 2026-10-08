@@ -25,6 +25,7 @@ class UserResponse(BaseModel):
     """User information response"""
     id: int = Field(..., description="User ID")
     email: str = Field(..., description="User email")
+    status: str = Field(default="pending", description="User approval status (pending, approved, denied)")
 
     class Config:
         from_attributes = True

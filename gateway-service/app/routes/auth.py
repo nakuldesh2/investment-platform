@@ -62,7 +62,7 @@ async def register(
         else:
             logger.info(f"User registered pending approval: {new_user.email}")
 
-        return UserResponse(id=new_user.id, email=new_user.email)
+        return UserResponse(id=new_user.id, email=new_user.email, status=new_user.status)
 
     except InvalidRequestError:
         await db.rollback()
@@ -184,7 +184,7 @@ async def get_current_user(
     if not user:
         raise UnauthorizedError("User not found")
 
-    return UserResponse(id=user.id, email=user.email)
+    return UserResponse(id=user.id, email=user.email, status=user.status)
 
 
 @router.get("/user-keys")

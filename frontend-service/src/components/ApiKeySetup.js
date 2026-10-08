@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, ExternalLink, CheckCircle } from 'lucide-react';
 import './ApiKeySetup.css';
 
-function ApiKeySetup({ onComplete, userId }) {
+function ApiKeySetup({ onComplete, userId, backendUrl }) {
   const [formData, setFormData] = useState({
     alpha_vantage: '',
     news_api: '',
@@ -12,12 +12,12 @@ function ApiKeySetup({ onComplete, userId }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const apiBase = backendUrl || process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
   // Load existing API keys on mount
   useEffect(() => {
     const loadExistingKeys = async () => {
       try {
-        const apiBase = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
         const response = await fetch(`${apiBase}/auth/user-keys`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -78,7 +78,6 @@ function ApiKeySetup({ onComplete, userId }) {
     setErrors({});
 
     try {
-      const apiBase = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
       const response = await fetch(`${apiBase}/auth/user-keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

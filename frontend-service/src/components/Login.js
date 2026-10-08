@@ -1,41 +1,64 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { authAPI } from "../api/client";
 import "./Login.css";
 
-export default function Login({ onLoginSuccess }) {
+export default function Login({ onLoginSuccess, onAccessRequested, backendUrl }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
-      if (isLogin) {
-        // Login
-        await authAPI.login(email, password);
-        onLoginSuccess();
-        navigate("/dashboard");
-      } else {
-        // Register
-        await authAPI.register(email, password);
-        // Auto-login after registration
-        await authAPI.login(email, password);
-        onLoginSuccess();
-        navigate("/dashboard");
+      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      const response = await fetch(`${backendUrl}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.detail || data.error || "Authentication failed");
+        return;
       }
-    } catch (err) {
-      setError(
-        err.response?.data?.error ||
-          err.response?.data?.detail ||
-          "Authentication failed. Please try again."
-      );
+
+      if (isLogin) {
+        // Login successful - token is in httpOnly cookie
+        const userResponse = await fetch(`${backendUrl}/auth/me`, {
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          onLoginSuccess(userData);
+        }
+      } else {
+        // Registration successful
+        const status = data.status || "pending";
+        if (status === "approved") {
+          setSuccess("Account created and approved! Logging you in...");
+          setTimeout(() => {
+            setIsLogin(true);
+            setPassword("");
+          }, 1500);
+        } else {
+          setSuccess("Account created! Please wait for admin approval.");
+          onAccessRequested(email);
+        }
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -44,11 +67,19 @@ export default function Login({ onLoginSuccess }) {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>{isLogin ? "Sign In" : "Create Account"}</h1>
+        <div className="login-header">
+          <h1>{isLogin ? "Sign In" : "Create Account"}</h1>
+          <p className="subtitle">
+            {isLogin
+              ? "Access your investment research dashboard"
+              : "Join the investment research platform"}
+          </p>
+        </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && <div className="error-box">{error}</div>}
+        {success && <div className="success-box">{success}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <input
@@ -59,6 +90,7 @@ export default function Login({ onLoginSuccess }) {
               placeholder="you@example.com"
               required
               disabled={loading}
+              autoComplete="email"
             />
           </div>
 
@@ -69,36 +101,43 @@ export default function Login({ onLoginSuccess }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={isLogin ? "Enter your password" : "Minimum 8 characters"}
-              minLength={8}
+              placeholder="••••••••"
               required
               disabled={loading}
+              autoComplete={isLogin ? "current-password" : "new-password"}
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="submit-button"
-          >
+          <button type="submit" className="submit-button" disabled={loading}>
             {loading ? "Processing..." : isLogin ? "Sign In" : "Create Account"}
           </button>
         </form>
 
-        <div className="toggle-auth">
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError("");
-              setEmail("");
-              setPassword("");
-            }}
-            className="toggle-button"
-          >
-            {isLogin ? "Sign Up" : "Sign In"}
-          </button>
+        <div className="login-footer">
+          <p>
+            {isLogin ? "Don't have an account?" : "Already have an account?"}
+            {" "}
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError("");
+                setSuccess("");
+                setPassword("");
+              }}
+              className="toggle-button"
+              disabled={loading}
+            >
+              {isLogin ? "Create one" : "Sign in"}
+            </button>
+          </p>
+        </div>
+
+        <div className="login-info">
+          <p>
+            <strong>Demo Access:</strong> Use any email with allowlisted domain
+            or contact the administrator for approval.
+          </p>
         </div>
       </div>
     </div>

@@ -1,13 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogOut, Search, TrendingUp, Newspaper, Zap } from 'lucide-react';
 import './Dashboard.css';
 import StockSearch from './StockSearch';
 import NewsSection from './NewsSection';
 import SignalsSection from './SignalsSection';
 
-function Dashboard({ apiKeys, onLogout, backendUrl }) {
+function Dashboard({ user, onLogout, backendUrl }) {
   const [activeTab, setActiveTab] = useState('search');
   const [selectedStock, setSelectedStock] = useState(null);
+  const [apiKeys, setApiKeys] = useState({});
+
+  useEffect(() => {
+    const fetchApiKeys = async () => {
+      try {
+        const response = await fetch(`${backendUrl}/auth/user-keys`, {
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setApiKeys(data.api_keys || {});
+        }
+      } catch (error) {
+        console.error('Failed to fetch API keys:', error);
+      }
+    };
+
+    fetchApiKeys();
+  }, [backendUrl]);
 
   return (
     <div className="dashboard">

@@ -146,7 +146,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend-service
-          npm install --legacy-peer-deps --force
+          npm install
 
       - name: Check for linting issues
         run: |

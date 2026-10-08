@@ -1,0 +1,201 @@
+================================================================================
+INVESTMENT PLATFORM - RAILWAY DEPLOYMENT QUICK REFERENCE CARD
+================================================================================
+
+📋 STEP 1: PREPARE ENVIRONMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generate JWT Secret Key:
+  python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+
+Required API Keys (get from):
+  ✓ Alpha Vantage: https://www.alphavantage.co/
+  ✓ MarketAux: https://www.marketaux.com/
+  ✓ NewsAPI: https://newsapi.org/
+  ✓ Finnhub: https://finnhub.io/
+
+Allowlist Emails (comma-separated):
+  admin@example.com,yourname@example.com
+
+═════════════════════════════════════════════════════════════════════════════
+
+🚀 STEP 2: DEPLOY ON RAILWAY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to https://railway.app → Sign in with GitHub
+2. Click "New Project"
+3. Select "Deploy from GitHub"
+4. Choose: nakuldesh2/investment-platform
+5. Railway auto-detects docker-compose.yml and starts deployment
+
+═════════════════════════════════════════════════════════════════════════════
+
+⚙️  STEP 3: CONFIGURE GATEWAY SERVICE VARIABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Click: gateway-service → Variables
+
+Add these variables:
+  ENVIRONMENT                    | production
+  DEBUG                          | False
+  LOG_LEVEL                      | INFO
+  SECRET_KEY                     | <generated_32_char_key>
+  JWT_ALGORITHM                  | HS256
+  JWT_EXPIRATION_HOURS           | 24
+  ALLOWLIST_EMAILS               | <your_emails>
+  SERVICE_NAME                   | gateway-service
+  SERVICE_PORT                   | 8000
+  REQUEST_TIMEOUT_SECONDS        | 30
+  MARKET_DATA_BASE_URL           | http://market-data-service:8001
+  NEWS_SERVICE_BASE_URL          | http://news-service:8002
+  ML_SIGNAL_BASE_URL             | http://ml-signal-service:8003
+
+═════════════════════════════════════════════════════════════════════════════
+
+⚙️  STEP 4: CONFIGURE OTHER SERVICES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+market-data-service → Variables:
+  ENVIRONMENT                    | production
+  DEBUG                          | False
+  LOG_LEVEL                      | INFO
+  ALPHA_VANTAGE_API_KEY          | <your_key>
+  SERVICE_NAME                   | market-data-service
+  SERVICE_PORT                   | 8001
+  REQUEST_TIMEOUT_SECONDS        | 30
+
+news-service → Variables:
+  ENVIRONMENT                    | production
+  DEBUG                          | False
+  LOG_LEVEL                      | INFO
+  MARKETAUX_API_TOKEN            | <your_key>
+  SERVICE_NAME                   | news-service
+  SERVICE_PORT                   | 8002
+  REQUEST_TIMEOUT_SECONDS        | 30
+
+ml-signal-service → Variables:
+  ENVIRONMENT                    | production
+  DEBUG                          | False
+  LOG_LEVEL                      | INFO
+  SERVICE_NAME                   | ml-signal-service
+  SERVICE_PORT                   | 8003
+  REQUEST_TIMEOUT_SECONDS        | 30
+
+frontend-service → Variables:
+  ENVIRONMENT                    | production
+  DEBUG                          | False
+  REACT_APP_BACKEND_URL          | https://<gateway-domain>
+  (Set this AFTER you get gateway domain below)
+
+═════════════════════════════════════════════════════════════════════════════
+
+🌐 STEP 5: GET PUBLIC DOMAINS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For each service: Click → Settings → Domains → "Generate Domain"
+
+  Gateway Service Domain       | https://___________________
+  Frontend Service Domain      | https://___________________
+
+Save these! You'll need them for:
+  - REACT_APP_BACKEND_URL (update frontend-service variables)
+  - Share frontend domain with users
+  - API endpoint URL
+
+═════════════════════════════════════════════════════════════════════════════
+
+✅ STEP 6: VERIFY DEPLOYMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Dashboard shows all services:
+  ✓ gateway-service      [Running]
+  ✓ market-data-service  [Running]
+  ✓ news-service         [Running]
+  ✓ ml-signal-service    [Running]
+  ✓ frontend-service     [Running]
+  ✓ postgres             [Healthy]
+  ✓ redis                [Healthy]
+
+Test Gateway Health:
+  curl https://<gateway-domain>/health
+
+  Should return:
+  {"status":"ok","service":"gateway-service",...}
+
+═════════════════════════════════════════════════════════════════════════════
+
+🧪 STEP 7: TEST IN BROWSER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open: https://<frontend-domain>
+
+Test Allowlisted User:
+  1. Click "Create Account"
+  2. Email: <allowlisted-email>
+  3. Password: any_secure_password
+  4. Auto-login → API Key Setup page
+  5. Enter API keys → Dashboard with market data
+
+Test Non-Allowlisted User:
+  1. Register with different email
+  2. See "Access Request Pending" message
+  3. Verify can't login
+
+═════════════════════════════════════════════════════════════════════════════
+
+🔐 SECURITY CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✓ SECRET_KEY is unique (not in git)
+  ✓ API Keys stored in Railway Variables (not committed)
+  ✓ HTTPS enabled (Railway automatic)
+  ✓ JWT tokens in httpOnly cookies (XSS protection)
+  ✓ Allowlist emails configured correctly
+  ✓ Debug=False in production
+  ✓ Database has strong credentials (Railway auto-generated)
+
+═════════════════════════════════════════════════════════════════════════════
+
+❓ TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Services not running?
+  → Check Railway Logs (click service → Logs tab)
+  → Look for database connection errors
+  → Verify all variables are set
+
+Can't register users?
+  → Verify ALLOWLIST_EMAILS is correct
+  → Check database initialized (look at gateway startup logs)
+  → Test gateway health endpoint
+
+Frontend can't reach API?
+  → Check REACT_APP_BACKEND_URL matches gateway domain
+  → URL must include https://
+  → Verify gateway is running
+
+═════════════════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  RAILWAY_QUICKSTART.md       → 5-minute setup guide
+  DEPLOYMENT.md               → Full detailed guide
+  DEPLOYMENT_CHECKLIST.md     → Verification checklist
+  .env.example                → Configuration reference
+
+═════════════════════════════════════════════════════════════════════════════
+
+🎉 DEPLOYMENT COMPLETE!
+
+Your platform is now:
+  ✓ Live on public URL
+  ✓ Protected by allowlist
+  ✓ Using real market data APIs
+  ✓ Storing user data securely
+  ✓ Ready for users
+
+Share frontend URL: https://<frontend-domain>
+Only users with allowlisted emails can access!
+
+═════════════════════════════════════════════════════════════════════════════

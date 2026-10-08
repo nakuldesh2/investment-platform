@@ -2,7 +2,7 @@ import os
 from typing import Any, List, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header
 from pydantic import BaseModel
 
 MARKETAUX_API_TOKEN = os.getenv("MARKETAUX_API_TOKEN", "replace_me")
@@ -35,7 +35,12 @@ def health() -> dict:
 
 
 @app.get("/sentiment/{symbol}", response_model=SentimentResponse)
-async def get_sentiment(symbol: str, limit: int = Query(default=5, ge=1, le=20), mock: bool = Query(default=False)) -> SentimentResponse:
+async def get_sentiment(
+    symbol: str,
+    limit: int = Query(default=5, ge=1, le=20),
+    mock: bool = Query(default=False),
+    x_marketaux_token: Optional[str] = Header(None)
+) -> SentimentResponse:
     normalized_symbol = symbol.upper()
 
     if mock:
@@ -66,8 +71,11 @@ async def get_sentiment(symbol: str, limit: int = Query(default=5, ge=1, le=20),
             articles=articles,
         )
 
+    # Use API token from header or fallback to environment variable
+    api_token = x_marketaux_token or MARKETAUX_API_TOKEN
+
     params = {
-        "api_token": MARKETAUX_API_TOKEN,
+        "api_token": api_token,
         "symbols": normalized_symbol,
         "language": "en",
         "limit": limit,

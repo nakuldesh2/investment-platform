@@ -2,8 +2,10 @@ import os
 from typing import Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header
 from pydantic import BaseModel
+
+from app.rate_limiter import alpha_vantage_limiter
 
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "demo")
 REQUEST_TIMEOUT_SECONDS = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20"))
@@ -27,7 +29,11 @@ def health() -> dict:
 
 
 @app.get("/quote/{symbol}", response_model=QuoteResponse)
-async def get_quote(symbol: str, mock: bool = Query(default=False)) -> QuoteResponse:
+async def get_quote(
+    symbol: str,
+    mock: bool = Query(default=False),
+    x_alpha_vantage_key: Optional[str] = Header(None)
+) -> QuoteResponse:
     normalized_symbol = symbol.upper()
 
     if mock:
@@ -40,11 +46,17 @@ async def get_quote(symbol: str, mock: bool = Query(default=False)) -> QuoteResp
             source="mock",
         )
 
+    # Use API key from header or fallback to environment variable
+    api_key = x_alpha_vantage_key or ALPHA_VANTAGE_API_KEY
+
     params = {
         "function": "GLOBAL_QUOTE",
         "symbol": normalized_symbol,
-        "apikey": ALPHA_VANTAGE_API_KEY,
+        "apikey": api_key,
     }
+
+    # Respect rate limits (5 calls/min for Alpha Vantage free tier)
+    await alpha_vantage_limiter.wait_if_needed()
 
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as client:

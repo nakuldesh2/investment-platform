@@ -26,13 +26,14 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     # Startup
     logger.info("Gateway service starting up")
-    # Create tables if they don't exist
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # TODO: Initialize database when properly configured
+    # async with engine.begin() as conn:
+    #     await conn.run_sync(Base.metadata.create_all)
     yield
     # Shutdown
     logger.info("Gateway service shutting down")
-    await engine.dispose()
+    # TODO: Dispose database connection when properly configured
+    # await engine.dispose()
 
 
 app = FastAPI(title="gateway-service", version="0.1.0", lifespan=lifespan)

@@ -47,7 +47,11 @@ setup_auth_middleware(app)
 # Added last so it is outermost and answers preflight OPTIONS before auth runs
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()],
+    allow_origins=[
+        o.strip().strip("'\"").rstrip("/")
+        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+        if o.strip().strip("'\"")
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

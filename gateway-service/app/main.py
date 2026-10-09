@@ -6,7 +6,8 @@ from fastapi import FastAPI, HTTPException, Query, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import GatewaySettings, get_settings
-from app.db import get_db, engine, Base
+# TODO: Re-enable database imports when DATABASE_URL is properly configured
+# from app.db import get_db, engine, Base
 from app.logging_config import setup_logging, get_logger
 from app.middleware.error_handler import setup_error_handling
 from app.middleware.auth import setup_auth_middleware

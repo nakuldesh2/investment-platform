@@ -5,7 +5,7 @@ from sqlalchemy.pool import NullPool
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://investment_user:investment_pass@postgres:5432/investment_platform"
+    "sqlite+aiosqlite:///./test.db"  # Fallback to SQLite for local testing
 )
 
 engine = create_async_engine(

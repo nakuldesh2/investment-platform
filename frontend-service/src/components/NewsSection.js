@@ -3,7 +3,7 @@ import axios from 'axios';
 import { ExternalLink, AlertCircle, Loader, ThumbsUp, ThumbsDown } from 'lucide-react';
 import './NewsSection.css';
 
-function NewsSection({ apiKeys, backendUrl, selectedStock }) {
+function NewsSection({ backendUrl, selectedStock }) {
   const [news, setNews] = useState([]);
   const [sentiment, setSentiment] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,27 +22,19 @@ function NewsSection({ apiKeys, backendUrl, selectedStock }) {
     setSentiment(null);
 
     try {
-      // Fetch news
-      const newsResponse = await axios.get(`${backendUrl}/news/${symbol.toUpperCase()}`, {
-        headers: {
-          'X-News-API-Key': apiKeys.newsApiKey,
-          'X-Finnhub-API-Key': apiKeys.finnhubKey
-        }
+      const response = await axios.get(`${backendUrl}/api/news/sentiment/${symbol.toUpperCase()}`, {
+        withCredentials: true
       });
-      setNews(newsResponse.data.articles || []);
-
-      // Fetch sentiment
-      try {
-        const sentimentResponse = await axios.get(`${backendUrl}/sentiment/${symbol.toUpperCase()}`, {
-          headers: {
-            'X-News-API-Key': apiKeys.newsApiKey,
-            'X-Finnhub-API-Key': apiKeys.finnhubKey
-          }
-        });
-        setSentiment(sentimentResponse.data);
-      } catch (err) {
-        console.log('Sentiment data not available');
-      }
+      const articles = response.data.articles || [];
+      setNews(articles);
+      const breakdown = { positive: 0, neutral: 0, negative: 0 };
+      articles.forEach((a) => {
+        const score = a.sentiment_score || 0;
+        if (score > 0.15) breakdown.positive += 1;
+        else if (score < -0.15) breakdown.negative += 1;
+        else breakdown.neutral += 1;
+      });
+      setSentiment({ ...response.data, sentiment_breakdown: breakdown });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to fetch news. Please try again.');
       console.error('API Error:', err);

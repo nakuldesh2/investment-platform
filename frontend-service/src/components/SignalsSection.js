@@ -3,7 +3,7 @@ import axios from 'axios';
 import { AlertCircle, Loader, TrendingUp, TrendingDown } from 'lucide-react';
 import './SignalsSection.css';
 
-function SignalsSection({ apiKeys, backendUrl, selectedStock }) {
+function SignalsSection({ backendUrl, selectedStock }) {
   const [symbol, setSymbol] = useState(selectedStock || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,14 +21,19 @@ function SignalsSection({ apiKeys, backendUrl, selectedStock }) {
     setSignal(null);
 
     try {
-      const response = await axios.post(`${backendUrl}/signals/${symbol.toUpperCase()}`, {}, {
-        headers: {
-          'X-Alpha-Vantage-Key': apiKeys.alphaVantageKey,
-          'Content-Type': 'application/json'
-        }
+      const response = await axios.get(`${backendUrl}/api/ideas/top`, {
+        params: { symbols: symbol.toUpperCase() },
+        withCredentials: true
       });
-
-      setSignal(response.data);
+      const idea = response.data[0];
+      if (!idea) throw new Error('No signal returned');
+      const label = { strong_buy_candidate: 'BUY', buy_candidate: 'BUY', avoid: 'SELL' }[idea.recommendation] || 'HOLD';
+      setSignal({
+        ...idea,
+        signal: label,
+        confidence: Math.round(idea.confidence * 100),
+        generated_at: new Date().toISOString()
+      });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to generate signal. Please try again.');
       console.error('API Error:', err);
@@ -104,6 +109,20 @@ function SignalsSection({ apiKeys, backendUrl, selectedStock }) {
             </div>
           </div>
 
+          {signal.reason_codes?.length > 0 && (
+            <div className="technical-indicators">
+              <h3>Why</h3>
+              <div className="indicators-grid">
+                {signal.reason_codes.map((code) => (
+                  <div className="indicator" key={code}>
+                    <span className="indicator-label">{code.replace(/_/g, ' ')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {signal.technical_indicators && (
           <div className="technical-indicators">
             <h3>Technical Indicators</h3>
             <div className="indicators-grid">
@@ -133,6 +152,7 @@ function SignalsSection({ apiKeys, backendUrl, selectedStock }) {
               )}
             </div>
           </div>
+          )}
 
           {signal.risk_score !== undefined && (
             <div className="risk-assessment">

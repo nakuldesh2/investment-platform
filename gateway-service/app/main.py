@@ -82,32 +82,60 @@ def get_current_user_id(request: Request) -> int:
     return user_id
 
 
+async def _user_api_keys(request: Request, db: AsyncSession) -> dict:
+    from app.models import User
+    user = await db.get(User, get_current_user_id(request))
+    return (user.api_keys or {}) if user else {}
+
+
 @app.get("/api/market/quote/{symbol}")
-async def market_quote(symbol: str, mock: bool = Query(default=True)):
-    return await _proxy_json(f"{MARKET_DATA_BASE_URL}/quote/{symbol}", {"mock": str(mock).lower()})
+async def market_quote(
+    symbol: str,
+    request: Request,
+    mock: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db),
+):
+    keys = await _user_api_keys(request, db)
+    headers = {"X-Alpha-Vantage-Key": keys["alpha_vantage"]} if keys.get("alpha_vantage") else {}
+    return await _proxy_json(f"{MARKET_DATA_BASE_URL}/quote/{symbol}", {"mock": str(mock).lower()}, headers)
 
 
 @app.get("/api/news/sentiment/{symbol}")
-async def news_sentiment(symbol: str, mock: bool = Query(default=True), limit: int = Query(default=5)):
+async def news_sentiment(
+    symbol: str,
+    request: Request,
+    mock: bool = Query(default=False),
+    limit: int = Query(default=5),
+    db: AsyncSession = Depends(get_db),
+):
+    keys = await _user_api_keys(request, db)
+    headers = {"X-Marketaux-Token": keys["marketaux"]} if keys.get("marketaux") else {}
     return await _proxy_json(
         f"{NEWS_SERVICE_BASE_URL}/sentiment/{symbol}",
         {"mock": str(mock).lower(), "limit": limit},
+        headers,
     )
 
 
 @app.get("/api/ideas/top")
-async def top_ideas(symbols: str, use_mock_data: bool = Query(default=True)):
+async def top_ideas(symbols: str, use_mock_data: bool = Query(default=False)):
     return await _proxy_json(
         f"{ML_SIGNAL_BASE_URL}/ideas/top",
         {"symbols": symbols, "use_mock_data": str(use_mock_data).lower()},
     )
 
 
-async def _proxy_json(url: str, params: dict):
+async def _proxy_json(url: str, params: dict, headers: dict = None):
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as client:
-            response = await client.get(url, params=params)
-            response.raise_for_status()
-            return response.json()
+            response = await client.get(url, params=params, headers=headers or {})
     except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=f"gateway upstream error: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"Upstream service unreachable: {exc}") from exc
+    if response.status_code >= 400:
+        try:
+            detail = response.json().get("detail", response.text)
+        except ValueError:
+            detail = response.text
+        status = response.status_code if response.status_code in (400, 404, 429) else 502
+        raise HTTPException(status_code=status, detail=detail)
+    return response.json()

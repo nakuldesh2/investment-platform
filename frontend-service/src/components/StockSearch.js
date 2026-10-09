@@ -3,7 +3,7 @@ import axios from 'axios';
 import { TrendingUp, TrendingDown, AlertCircle, Loader } from 'lucide-react';
 import './StockSearch.css';
 
-function StockSearch({ apiKeys, backendUrl, onStockSelect }) {
+function StockSearch({ backendUrl, onStockSelect }) {
   const [symbol, setSymbol] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,11 +21,8 @@ function StockSearch({ apiKeys, backendUrl, onStockSelect }) {
     setQuoteData(null);
 
     try {
-      const response = await axios.get(`${backendUrl}/market-data/quote/${symbol.toUpperCase()}`, {
-        headers: {
-          'X-Alpha-Vantage-Key': apiKeys.alphaVantageKey,
-          'Content-Type': 'application/json'
-        }
+      const response = await axios.get(`${backendUrl}/api/market/quote/${symbol.toUpperCase()}`, {
+        withCredentials: true
       });
 
       setQuoteData(response.data);

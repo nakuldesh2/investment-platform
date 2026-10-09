@@ -22,7 +22,8 @@
       "Bash(curl -X POST http://localhost:8000/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"admin@example.com\",\"password\":\"adminpass123\"}')",
       "Bash(curl *)",
       "Bash(chmod +x *)",
-      "Bash(git revert *)"
+      "Bash(git revert *)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }

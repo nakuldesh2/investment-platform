@@ -38,7 +38,6 @@ function App() {
         if (keysResponse.ok) {
           const keysData = await keysResponse.json();
           if (keysData.api_keys && Object.keys(keysData.api_keys).length > 0) {
-            setApiKeysSetup(true);
             setAuthState('dashboard');
           } else {
             setAuthState('setup');

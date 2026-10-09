@@ -43,7 +43,7 @@ async def register(
             raise InvalidRequestError(f"Email {request.email} is already registered")
 
         # Check if email is in allowlist
-        is_allowlisted = request.email in settings.allowlist_emails
+        is_allowlisted = request.email.lower() in settings.allowlisted_emails
         user_status = "approved" if is_allowlisted else "pending"
 
         # Create new user with hashed password
@@ -106,7 +106,7 @@ async def login(
             value=token,
             httponly=True,
             secure=settings.is_production,
-            samesite="strict",
+            samesite="none" if settings.is_production else "lax",
             max_age=settings.jwt_expiration_hours * 3600
         )
 
@@ -123,7 +123,7 @@ async def login(
 @router.post("/logout")
 async def logout(response: Response):
     """Logout user by clearing token cookie"""
-    response.delete_cookie(key="access_token", httponly=True)
+    response.delete_cookie(key="access_token", httponly=True, secure=True, samesite="none")
     logger.info("User logged out")
     return {"message": "Logged out successfully"}
 
@@ -157,7 +157,7 @@ async def refresh_token(
             value=new_token,
             httponly=True,
             secure=settings.is_production,
-            samesite="strict",
+            samesite="none" if settings.is_production else "lax",
             max_age=settings.jwt_expiration_hours * 3600
         )
 

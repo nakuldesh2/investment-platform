@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import GatewaySettings, get_settings
@@ -26,14 +27,12 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     # Startup
     logger.info("Gateway service starting up")
-    # TODO: Initialize database when properly configured
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
+    import app.models  # noqa: F401  registers tables on Base.metadata
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
-    # Shutdown
     logger.info("Gateway service shutting down")
-    # TODO: Dispose database connection when properly configured
-    # await engine.dispose()
+    await engine.dispose()
 
 
 app = FastAPI(title="gateway-service", version="0.1.0", lifespan=lifespan)
@@ -44,6 +43,15 @@ setup_logging()
 # Setup middleware (error handling and auth)
 setup_error_handling(app)
 setup_auth_middleware(app)
+
+# Added last so it is outermost and answers preflight OPTIONS before auth runs
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Register auth routes
 app.include_router(auth_router)

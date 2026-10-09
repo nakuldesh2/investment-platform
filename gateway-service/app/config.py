@@ -69,10 +69,14 @@ class GatewaySettings(BaseAppSettings):
     jwt_expiration_hours: int = Field(default=24, description="JWT token expiration in hours")
 
     # User allowlist
-    allowlist_emails: list[str] = Field(
-        default=["admin@example.com"],
-        description="List of emails auto-approved without admin review"
+    allowlist_emails: str = Field(
+        default="admin@example.com",
+        description="Comma-separated emails auto-approved without admin review"
     )
+
+    @property
+    def allowlisted_emails(self) -> set[str]:
+        return {e.strip().lower() for e in self.allowlist_emails.split(",") if e.strip()}
 
     def __init__(self, **data):
         super().__init__(**data)

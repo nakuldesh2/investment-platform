@@ -6,7 +6,7 @@
 ```bash
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
-**Save the output.**
+**Copy and save the output.**
 
 ### 2. Get API Keys
 - **Alpha Vantage:** https://www.alphavantage.co/ (free)
@@ -16,101 +16,149 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 Go to https://railway.app and sign up (free tier)
 
 ### 4. Know Your Email
-This will be auto-approved to access the platform.
+This email will be auto-approved to access the platform.
 
 ---
 
-## Deploy (10 minutes)
+## Deploy Services (25 minutes)
 
-### Step 1: Connect GitHub to Railway
+### Step 1: Create Empty Project
 1. Go to https://railway.app
-2. Click **"New Project"**
-3. Click **"Deploy from GitHub"**
-4. Authorize Railway and select `investment-platform`
-5. Wait 2-3 minutes for services to appear (postgres, redis, all 5 services)
+2. Click **"New Project"** → **"Empty Project"**
 
-### Step 2: Configure Gateway Service
-1. Click on **gateway-service**
-2. Click **"Variables"** tab
-3. Add these variables:
+### Step 2: Add Gateway Service
+1. Click **"+ New Service"** → **"GitHub Repo"**
+2. Select **`nakuldesh2/investment-platform`**
+3. In Settings tab, click **"Add Root Directory"**
+4. Enter: `gateway-service`
+5. Click **"Variables"** tab
+6. Add variables:
 ```
 ENVIRONMENT=production
 DEBUG=False
-SECRET_KEY=<paste_from_step_1>
-ALLOWLIST_EMAILS=yourname@example.com
+SECRET_KEY=<paste_your_secret_key>
+ALLOWLIST_EMAILS=<your_email>
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=24
+SERVICE_NAME=gateway-service
+SERVICE_PORT=8000
+REQUEST_TIMEOUT_SECONDS=30
+MARKET_DATA_BASE_URL=http://market-data-service:8001
+NEWS_SERVICE_BASE_URL=http://news-service:8002
+ML_SIGNAL_BASE_URL=http://ml-signal-service:8003
 ```
-4. Click **"Save"** or **"Deploy"**
 
-### Step 3: Configure Market Data Service
-1. Click on **market-data-service**
-2. Click **"Variables"** tab
-3. Add:
+### Step 3: Add Market Data Service
+1. Click **"+ New Service"** → **"GitHub Repo"**
+2. Select **`nakuldesh2/investment-platform`**
+3. Click **"Add Root Directory"** → Enter: `market-data-service`
+4. Click **"Variables"** tab
+5. Add:
 ```
 ENVIRONMENT=production
-ALPHA_VANTAGE_API_KEY=<your_key_from_prerequisites>
+DEBUG=False
+ALPHA_VANTAGE_API_KEY=<your_api_key>
+SERVICE_NAME=market-data-service
+SERVICE_PORT=8001
+REQUEST_TIMEOUT_SECONDS=30
 ```
-4. Click **"Save"**
 
-### Step 4: Configure News Service
-1. Click on **news-service**
-2. Click **"Variables"** tab
-3. Add:
+### Step 4: Add News Service
+1. Click **"+ New Service"** → **"GitHub Repo"**
+2. Select **`nakuldesh2/investment-platform`**
+3. Click **"Add Root Directory"** → Enter: `news-service`
+4. Click **"Variables"** tab
+5. Add:
 ```
 ENVIRONMENT=production
-MARKETAUX_API_TOKEN=<your_token_from_prerequisites>
+DEBUG=False
+MARKETAUX_API_TOKEN=<your_token>
+SERVICE_NAME=news-service
+SERVICE_PORT=8002
+REQUEST_TIMEOUT_SECONDS=30
 ```
-4. Click **"Save"**
 
-### Step 5: Configure ML Signal Service
-1. Click on **ml-signal-service**
-2. Click **"Variables"** tab
-3. Add:
+### Step 5: Add ML Signal Service
+1. Click **"+ New Service"** → **"GitHub Repo"**
+2. Select **`nakuldesh2/investment-platform`**
+3. Click **"Add Root Directory"** → Enter: `ml-signal-service`
+4. Click **"Variables"** tab
+5. Add:
 ```
 ENVIRONMENT=production
+DEBUG=False
+SERVICE_NAME=ml-signal-service
+SERVICE_PORT=8003
+REQUEST_TIMEOUT_SECONDS=30
 ```
-4. Click **"Save"**
 
-### Step 6: Get Gateway Domain
-1. Click on **gateway-service**
-2. Click **"Settings"** tab
-3. Scroll to **"Domains"**
-4. Click **"Generate Domain"**
-5. **Copy this domain** (you'll need it next)
+### Step 6: Add PostgreSQL Database
+1. Click **"+ New Service"** → **"Database"** → **"PostgreSQL"**
+2. Railway creates it automatically with a DATABASE_URL
 
-### Step 7: Configure Frontend Service
-1. Click on **frontend-service**
-2. Click **"Variables"** tab
-3. Add:
+### Step 7: Add Redis Cache
+1. Click **"+ New Service"** → **"Database"** → **"Redis"**
+2. Railway creates it automatically with a REDIS_URL
+
+### Step 8: Add Frontend Service
+1. Click **"+ New Service"** → **"GitHub Repo"**
+2. Select **`nakuldesh2/investment-platform`**
+3. Click **"Add Root Directory"** → Enter: `frontend-service`
+4. Click **"Settings"** → Scroll to **"Domains"** → **"Generate Domain"**
+5. **Copy the domain** (you'll need it next)
+6. Click **"Variables"** tab
+7. Add:
 ```
-REACT_APP_BACKEND_URL=<paste_gateway_domain_from_step_6>
+REACT_APP_BACKEND_URL=https://<paste_gateway_domain>
 ENVIRONMENT=production
+DEBUG=False
 ```
-4. Click **"Save"**
+(Replace `<paste_gateway_domain>` with the gateway-service domain)
 
-### Step 8: Get Frontend Domain
-1. Click on **frontend-service**
-2. Click **"Settings"** tab
-3. Scroll to **"Domains"**
-4. Click **"Generate Domain"**
-5. **Copy this domain** - This is your public URL! ✅
+### Step 9: Get Gateway Domain
+1. Click on **gateway-service** in your services list
+2. Click **"Settings"** → Scroll to **"Domains"**
+3. Click **"Generate Domain"** (if not already done)
+4. **Copy this domain** - it's your API endpoint
 
-### Step 9: Wait for Services to Go Green
-Go back to main dashboard and wait 5-10 minutes for all services to show green status:
-- postgres ✅
-- redis ✅
+### Step 10: Update Frontend Domain Variable
+1. Go back to **frontend-service**
+2. Click **"Variables"** tab
+3. Find **`REACT_APP_BACKEND_URL`**
+4. Update it with the gateway domain you just copied:
+```
+REACT_APP_BACKEND_URL=https://<gateway-domain>
+```
+
+### Step 11: Deploy All Services
+1. At the top, you should see **"Apply X changes"** button
+2. Click **"Deploy"** button
+3. Wait 10-15 minutes for all services to build and deploy
+
+### Step 12: Wait for Services to Go Green
+Monitor the dashboard. All services should show:
+- ✅ Green status
+- ✅ "Active" state
+
+Services list:
 - gateway-service ✅
 - market-data-service ✅
 - news-service ✅
 - ml-signal-service ✅
 - frontend-service ✅
+- postgres ✅
+- redis ✅
 
-### Step 10: Test Your Platform
+### Step 13: Get Frontend Public URL
+1. Click on **frontend-service**
+2. Click **"Settings"** → **"Domains"**
+3. **Copy the public domain** - this is your app URL!
+
+### Step 14: Test Your Platform
 1. Open browser: `https://<your-frontend-domain>`
 2. Click **"Create Account"**
-3. Enter your email and password
-4. Should auto-login (because email is in allowlist)
+3. Enter your email (the allowlisted one) and password
+4. Should auto-login
 5. Configure API keys
 6. View dashboard with real market data
 7. Test logout and login
@@ -125,27 +173,27 @@ Your platform is now:
 - ✅ Using real market data
 - ✅ Cost: $0/month
 
-**Share the frontend URL with allowlisted users only.**
+**Share the frontend URL only with allowlisted users.**
 
 ---
 
 ## Troubleshooting
 
-**Services still red after 10 minutes?**
-- Click service → "Logs" tab → check for errors
-- Wait another 5 minutes
+**Services still red after 15 minutes?**
+- Click service → "Logs" → check for errors
+- Common: missing DATABASE_URL or REDIS_URL (should auto-populate)
 
 **Can't reach frontend?**
-- Check domain was generated (Step 8)
-- Try refreshing browser
-- Wait 2-3 minutes for DNS
+- Check domain was generated
+- Refresh browser
+- Wait 2-3 more minutes
 
 **Login fails?**
-- Make sure email is in ALLOWLIST_EMAILS
-- Check password is correct
+- Verify email is in ALLOWLIST_EMAILS
 - Try incognito window
+- Check gateway-service logs for errors
 
-**API returns errors?**
-- Check API keys are correct
-- Check key has calls remaining
-- Wait 1 minute and retry
+**API errors?**
+- Check all API keys are correct
+- Verify database and redis services are green
+- Check service logs

@@ -97,6 +97,9 @@ async def market_quote(
 ):
     keys = await _user_api_keys(request, db)
     headers = {"X-Alpha-Vantage-Key": keys["alpha_vantage"]} if keys.get("alpha_vantage") else {}
+    if keys.get("alpaca_key_id") and keys.get("alpaca_secret"):
+        headers["X-Alpaca-Key-Id"] = keys["alpaca_key_id"]
+        headers["X-Alpaca-Secret"] = keys["alpaca_secret"]
     return await _proxy_json(f"{MARKET_DATA_BASE_URL}/quote/{symbol}", {"mock": str(mock).lower()}, headers)
 
 

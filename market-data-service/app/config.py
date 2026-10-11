@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # External APIs
     alpha_vantage_api_key: str = Field(default="demo")
     alpha_vantage_url: str = Field(default="https://www.alphavantage.co/query")
+    alpaca_api_key: str = Field(default="")
+    alpaca_secret_key: str = Field(default="")
+    alpaca_data_url: str = Field(default="https://data.alpaca.markets")
+    alpaca_feed: str = Field(default="iex")
 
     class Config:
         env_file = ".env"

@@ -4,6 +4,8 @@ import './ApiKeySetup.css';
 
 function ApiKeySetup({ onComplete, userId, backendUrl }) {
   const [formData, setFormData] = useState({
+    alpaca_key_id: '',
+    alpaca_secret: '',
     alpha_vantage: '',
     news_api: '',
     finnhub: ''
@@ -27,7 +29,7 @@ function ApiKeySetup({ onComplete, userId, backendUrl }) {
         if (response.ok) {
           const data = await response.json();
           if (data.api_keys && Object.keys(data.api_keys).length > 0) {
-            setFormData(data.api_keys);
+            setFormData(prev => ({ ...prev, ...data.api_keys }));
           }
         }
       } catch (err) {
@@ -54,8 +56,11 @@ function ApiKeySetup({ onComplete, userId, backendUrl }) {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.alpha_vantage.trim()) {
-      newErrors.alpha_vantage = 'Alpha Vantage API key is required';
+    const hasAlpacaId = formData.alpaca_key_id.trim() !== '';
+    const hasAlpacaSecret = formData.alpaca_secret.trim() !== '';
+    if (hasAlpacaId !== hasAlpacaSecret) {
+      newErrors[hasAlpacaId ? 'alpaca_secret' : 'alpaca_key_id'] =
+        'Enter both the Alpaca Key ID and Secret Key, or leave both blank';
     }
     if (!formData.news_api.trim()) {
       newErrors.news_api = 'NewsAPI key is required';
@@ -140,8 +145,44 @@ function ApiKeySetup({ onComplete, userId, backendUrl }) {
             </div>
 
             <div className="form-group">
+              <label htmlFor="alpaca_key_id">
+                <span>Alpaca API Key ID</span>
+                <a href="https://alpaca.markets/" target="_blank" rel="noopener noreferrer">
+                  Get Free Key <ExternalLink size={14} />
+                </a>
+              </label>
+              <input
+                id="alpaca_key_id"
+                type="password"
+                name="alpaca_key_id"
+                value={formData.alpaca_key_id}
+                onChange={handleChange}
+                placeholder="Enter your Alpaca API Key ID"
+                className={errors.alpaca_key_id ? 'error' : ''}
+              />
+              {errors.alpaca_key_id && <span className="error-text">{errors.alpaca_key_id}</span>}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="alpaca_secret">
+                <span>Alpaca Secret Key</span>
+              </label>
+              <input
+                id="alpaca_secret"
+                type="password"
+                name="alpaca_secret"
+                value={formData.alpaca_secret}
+                onChange={handleChange}
+                placeholder="Enter your Alpaca Secret Key"
+                className={errors.alpaca_secret ? 'error' : ''}
+              />
+              {errors.alpaca_secret && <span className="error-text">{errors.alpaca_secret}</span>}
+              <small>Free tier: ~200 calls/min, real-time IEX feed | Primary source for stock quotes (optional if set on the server)</small>
+            </div>
+
+            <div className="form-group">
               <label htmlFor="alpha_vantage">
-                <span>Alpha Vantage API Key *</span>
+                <span>Alpha Vantage API Key</span>
                 <a href="https://www.alphavantage.co/" target="_blank" rel="noopener noreferrer">
                   Get Free Key <ExternalLink size={14} />
                 </a>
@@ -156,7 +197,7 @@ function ApiKeySetup({ onComplete, userId, backendUrl }) {
                 className={errors.alpha_vantage ? 'error' : ''}
               />
               {errors.alpha_vantage && <span className="error-text">{errors.alpha_vantage}</span>}
-              <small>Free tier: 5 calls/min, 500/day | Used for real-time stock quotes</small>
+              <small>Free tier: 5 calls/min, 25/day | Fallback when Alpaca is unavailable (optional)</small>
             </div>
 
             <div className="form-group">
